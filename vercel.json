@@ -1,8 +1,5 @@
 {
-    "framework": null,
-    "buildCommand": "npm run build",
-    "outputDirectory": ".",
-    "functions": {
-      "api/index.ts": { "runtime": "nodejs20.x" }
-    }
-  }
+  "framework": "none",
+  "buildCommand": "npm run build",
+  "installCommand": "npm install"
+}
