@@ -1,18 +1,17 @@
 import { Router } from "express";
-import type { TournamentStatus } from "@prisma/client";
 
-import { prisma } from "@/lib/prisma";
+import { db, TournamentStatus, tournamentStatusEnum } from "@/db";
 
 const communityRouter = Router();
 
 communityRouter.get("/players", async (req, res, next) => {
   try {
     const take = parseInt(String(req.query.limit ?? "6"), 10) || 6;
-    const players = await prisma.player.findMany({
-      orderBy: { createdAt: "desc" },
-      take,
+    const result = await db.query.players.findMany({
+      orderBy: (table, { desc }) => desc(table.createdAt),
+      limit: take,
     });
-    res.json(players);
+    res.json(result);
   } catch (error) {
     next(error);
   }
@@ -21,19 +20,21 @@ communityRouter.get("/players", async (req, res, next) => {
 communityRouter.get("/tournaments", async (req, res, next) => {
   try {
     const statusParam = String(req.query.status ?? "UPCOMING,ONGOING");
-    const statuses = statusParam.split(",").map((status) => status.trim()).filter(Boolean);
-    const tournaments = await prisma.tournament.findMany({
+    const statuses = statusParam
+      .split(",")
+      .map((status) => status.trim().toUpperCase())
+      .filter((status): status is TournamentStatus =>
+        tournamentStatusEnum.enumValues.includes(status as TournamentStatus)
+      );
+
+    const result = await db.query.tournaments.findMany({
       where: statuses.length
-        ? {
-            status: {
-              in: statuses as TournamentStatus[],
-            },
-          }
+        ? (table, { inArray }) => inArray(table.status, statuses)
         : undefined,
-      orderBy: [{ startDate: "asc" }],
-      take: parseInt(String(req.query.limit ?? "4"), 10) || 4,
+      orderBy: (table, { asc }) => asc(table.startDate),
+      limit: parseInt(String(req.query.limit ?? "4"), 10) || 4,
     });
-    res.json(tournaments);
+    res.json(result);
   } catch (error) {
     next(error);
   }
@@ -41,11 +42,11 @@ communityRouter.get("/tournaments", async (req, res, next) => {
 
 communityRouter.get("/events", async (_req, res, next) => {
   try {
-    const events = await prisma.communityEvent.findMany({
-      orderBy: { date: "asc" },
-      take: 6,
+    const result = await db.query.communityEvents.findMany({
+      orderBy: (table, { asc }) => asc(table.date),
+      limit: 6,
     });
-    res.json(events);
+    res.json(result);
   } catch (error) {
     next(error);
   }
@@ -54,11 +55,11 @@ communityRouter.get("/events", async (_req, res, next) => {
 communityRouter.get("/discussions", async (req, res, next) => {
   try {
     const take = parseInt(String(req.query.limit ?? "4"), 10) || 4;
-    const discussions = await prisma.discussion.findMany({
-      orderBy: { lastActivity: "desc" },
-      take,
+    const result = await db.query.discussions.findMany({
+      orderBy: (table, { desc }) => desc(table.lastActivity),
+      limit: take,
     });
-    res.json(discussions);
+    res.json(result);
   } catch (error) {
     next(error);
   }

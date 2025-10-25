@@ -1,24 +1,50 @@
-import { PrismaClient, Platform, TournamentStatus, TournamentTier, EventMode, Role } from "@prisma/client";
+import "dotenv/config";
 
-const prisma = new PrismaClient();
+import {
+  communityEvents,
+  discussions,
+  EventMode,
+  Platform,
+  players,
+  Role,
+  TournamentStatus,
+  TournamentTier,
+  tournaments,
+  users,
+} from "@/db";
+import { db } from "@/db";
 
 async function main() {
-  await prisma.user.upsert({
-    where: { email: "founder@efozone.id" },
-    update: {},
-    create: {
-      email: "founder@efozone.id",
-      name: "Admin EFOZone",
-      role: Role.ADMIN,
-      image: "https://images.pexels.com/photos/532220/pexels-photo-532220.jpeg?auto=compress&cs=tinysrgb&dpr=2&w=80",
-    },
-  });
+  const adminEmail = "founder@efozone.id";
 
-  const players = [
+  const [admin] = await db
+    .insert(users)
+    .values({
+      email: adminEmail,
+      name: "Admin EFOZone",
+      image:
+        "https://images.pexels.com/photos/532220/pexels-photo-532220.jpeg?auto=compress&cs=tinysrgb&dpr=2&w=80",
+      role: "ADMIN" satisfies Role,
+    })
+    .onConflictDoUpdate({
+      target: users.email,
+      set: {
+        name: "Admin EFOZone",
+        image:
+          "https://images.pexels.com/photos/532220/pexels-photo-532220.jpeg?auto=compress&cs=tinysrgb&dpr=2&w=80",
+        updatedAt: new Date(),
+        role: "ADMIN" satisfies Role,
+      },
+    })
+    .returning();
+
+  console.log(`Seed user ready: ${admin.email}`);
+
+  const playerData = [
     {
       name: "Raka Sandika",
       gamertag: "RAKA-CTRL",
-      platform: Platform.CONSOLE,
+      platform: "CONSOLE" as Platform,
       position: "CAM",
       archetype: "Possession Maestro",
       club: "Jakarta Galaxy",
@@ -30,7 +56,7 @@ async function main() {
     {
       name: "Nico Pramana",
       gamertag: "NICO-TURBO",
-      platform: Platform.STEAM,
+      platform: "STEAM" as Platform,
       position: "CF",
       archetype: "High Press",
       club: "Bandung Velocity",
@@ -42,7 +68,7 @@ async function main() {
     {
       name: "Dewi Laras",
       gamertag: "DEWI-COUNTER",
-      platform: Platform.CONSOLE,
+      platform: "CONSOLE" as Platform,
       position: "RW",
       archetype: "Vertical Runner",
       club: "Surabaya Phoenix",
@@ -54,7 +80,7 @@ async function main() {
     {
       name: "Alpha Nugraha",
       gamertag: "ALPHA-TIER",
-      platform: Platform.CROSSPLAY,
+      platform: "CROSSPLAY" as Platform,
       position: "LW",
       archetype: "Meta Finisher",
       club: "Makassar Reign",
@@ -66,7 +92,7 @@ async function main() {
     {
       name: "Neyra Dwi",
       gamertag: "NEYRA-BROADCAST",
-      platform: Platform.CROSSPLAY,
+      platform: "CROSSPLAY" as Platform,
       position: "CM",
       archetype: "Broadcast Strategist",
       club: "Yogyakarta Pulse",
@@ -78,7 +104,7 @@ async function main() {
     {
       name: "Rivandra G",
       gamertag: "RIV-433",
-      platform: Platform.CONSOLE,
+      platform: "CONSOLE" as Platform,
       position: "CDM",
       archetype: "Anchor Playmaker",
       club: "Bali Horizon",
@@ -89,90 +115,94 @@ async function main() {
     },
   ];
 
-  for (const player of players) {
-    await prisma.player.upsert({
-      where: { gamertag: player.gamertag },
-      update: {
-        ...player,
-      },
-      create: player,
-    });
+  for (const player of playerData) {
+    await db
+      .insert(players)
+      .values(player)
+      .onConflictDoUpdate({
+        target: players.gamertag,
+        set: { ...player, updatedAt: new Date() },
+      });
   }
+  console.log(`Seeded ${playerData.length} players`);
 
-  const tournaments = [
+  const tournamentData = [
     {
       name: "Liga Nusantara Vol.4",
       organizer: "EFOZone Crew",
-      tier: TournamentTier.COMMUNITY,
+      tier: "COMMUNITY" as TournamentTier,
       startDate: new Date("2025-05-31T13:00:00+07:00"),
       endDate: new Date("2025-06-30T21:00:00+07:00"),
       format: "Round Robin • BO2",
       prizePool: "Total 5.000.000",
       slotsTotal: 16,
       slotsTaken: 12,
-      platform: Platform.CROSSPLAY,
+      platform: "CROSSPLAY" as Platform,
       registrationUrl: "https://discord.gg/efozone",
-      status: TournamentStatus.ONGOING,
+      status: "ONGOING" as TournamentStatus,
     },
     {
       name: "Pro Invitational Scrim Night",
       organizer: "EFO Pro Division",
-      tier: TournamentTier.PRO,
+      tier: "PRO" as TournamentTier,
       startDate: new Date("2025-06-02T21:00:00+07:00"),
       endDate: new Date("2025-06-02T23:00:00+07:00"),
       format: "BO3 Mixed Squad",
       prizePool: "Sparring Prize 3.000.000",
       slotsTotal: 8,
       slotsTaken: 6,
-      platform: Platform.CONSOLE,
+      platform: "CONSOLE" as Platform,
       registrationUrl: "https://discord.gg/efozone",
-      status: TournamentStatus.UPCOMING,
+      status: "UPCOMING" as TournamentStatus,
     },
     {
       name: "Open Qualifier Cup",
       organizer: "EFO Open Series",
-      tier: TournamentTier.OPEN,
+      tier: "OPEN" as TournamentTier,
       startDate: new Date("2025-06-07T13:00:00+07:00"),
       endDate: new Date("2025-06-07T19:00:00+07:00"),
       format: "Single Elimination • BO1",
       prizePool: "Slot Offline Final",
       slotsTotal: 32,
       slotsTaken: 24,
-      platform: Platform.STEAM,
+      platform: "STEAM" as Platform,
       registrationUrl: "https://discord.gg/efozone",
-      status: TournamentStatus.UPCOMING,
+      status: "UPCOMING" as TournamentStatus,
     },
     {
       name: "Community Clash Series",
       organizer: "EFOZone Community",
-      tier: TournamentTier.COMMUNITY,
+      tier: "COMMUNITY" as TournamentTier,
       startDate: new Date("2025-06-15T19:30:00+07:00"),
       endDate: new Date("2025-06-20T22:00:00+07:00"),
       format: "Swiss Stage • BO1",
       prizePool: "Merch & Bootcamp Slot",
       slotsTotal: 24,
       slotsTaken: 18,
-      platform: Platform.CROSSPLAY,
+      platform: "CROSSPLAY" as Platform,
       registrationUrl: "https://discord.gg/efozone",
-      status: TournamentStatus.UPCOMING,
+      status: "UPCOMING" as TournamentStatus,
     },
   ];
 
-  for (const tournament of tournaments) {
-    await prisma.tournament.upsert({
-      where: { name: tournament.name },
-      update: tournament,
-      create: tournament,
-    });
+  for (const tournament of tournamentData) {
+    await db
+      .insert(tournaments)
+      .values(tournament)
+      .onConflictDoUpdate({
+        target: tournaments.name,
+        set: { ...tournament, updatedAt: new Date() },
+      });
   }
+  console.log(`Seeded ${tournamentData.length} tournaments`);
 
-  const events = [
+  const eventData = [
     {
       title: "Bootcamp Analisa Patch 4.0",
       organizer: "Coach Damar",
       date: new Date("2025-06-01T20:00:00+07:00"),
       location: "Discord Stage #analysis-room",
-      mode: EventMode.ONLINE,
+      mode: "ONLINE" as EventMode,
       summary: "Kupas tuntas perubahan meta patch 4.0 dengan studi kasus match top tier.",
       link: "https://discord.gg/efozone",
     },
@@ -181,7 +211,7 @@ async function main() {
       organizer: "EFO Community ID",
       date: new Date("2025-06-08T19:00:00+07:00"),
       location: "Jakarta — Space Garage",
-      mode: EventMode.OFFLINE,
+      mode: "OFFLINE" as EventMode,
       summary: "Nobar, giveaway jersey, dan scrim mini turnamen setelah pertandingan.",
       link: "https://event.efozone.id/watchparty",
     },
@@ -190,21 +220,24 @@ async function main() {
       organizer: "Mixer Squad",
       date: new Date("2025-06-05T21:00:00+07:00"),
       location: "Discord Voice #scrim-mixer",
-      mode: EventMode.HYBRID,
+      mode: "HYBRID" as EventMode,
       summary: "Mix roster lintas platform buat calibrate rotasi dan synergy sebelum turnamen besar.",
       link: "https://discord.gg/efozone",
     },
   ];
 
-  for (const event of events) {
-    await prisma.communityEvent.upsert({
-      where: { title: event.title },
-      update: event,
-      create: event,
-    });
+  for (const event of eventData) {
+    await db
+      .insert(communityEvents)
+      .values(event)
+      .onConflictDoUpdate({
+        target: communityEvents.title,
+        set: { ...event, updatedAt: new Date() },
+      });
   }
+  console.log(`Seeded ${eventData.length} community events`);
 
-  const discussions = [
+  const discussionData = [
     {
       title: "Pressing 4-3-3 Narrow Build Patch 4.0",
       slug: "pressing-4-3-3-narrow-patch-4-0",
@@ -212,7 +245,7 @@ async function main() {
         "Breakdown cara nge-press high block dengan L1 trigger + manual jockey. Lengkap dengan video breakdown dan mapping controller.",
       tags: ["tactics", "4-3-3", "pressing"],
       replies: 68,
-      platform: Platform.CONSOLE,
+      platform: "CONSOLE" as Platform,
       lastActivity: new Date("2025-05-30T22:00:00+07:00"),
       authorName: "Rivandra",
     },
@@ -223,17 +256,18 @@ async function main() {
         "Analisa build balanced yang tetap sustain stamina. Share preset slider dan variasi pressing sesuai lawan.",
       tags: ["formation", "steam", "build"],
       replies: 54,
-      platform: Platform.STEAM,
+      platform: "STEAM" as Platform,
       lastActivity: new Date("2025-05-30T18:00:00+07:00"),
       authorName: "Valdo",
     },
     {
       title: "Setting Kamera & Overlay buat Scrim Broadcast",
       slug: "setting-kamera-overlay-scrim",
-      summary: "Template overlay scoreboard custom buat matchday liga komunitas. Include file OBS & PSD.",
+      summary:
+        "Template overlay scoreboard custom buat matchday liga komunitas. Include file OBS & PSD.",
       tags: ["broadcast", "overlay", "coaching"],
       replies: 33,
-      platform: Platform.CROSSPLAY,
+      platform: "CROSSPLAY" as Platform,
       lastActivity: new Date("2025-05-29T21:00:00+07:00"),
       authorName: "Neyra",
     },
@@ -244,27 +278,33 @@ async function main() {
         "Tier list detail winger kiri/kanan termasuk statistik sprint 1v1 dan finishing cut-inside.",
       tags: ["meta", "players", "analysis"],
       replies: 41,
-      platform: Platform.CONSOLE,
+      platform: "CONSOLE" as Platform,
       lastActivity: new Date("2025-05-27T17:00:00+07:00"),
       authorName: "Alpha",
     },
   ];
 
-  for (const discussion of discussions) {
-    await prisma.discussion.upsert({
-      where: { slug: discussion.slug },
-      update: discussion,
-      create: discussion,
-    });
+  for (const discussion of discussionData) {
+    await db
+      .insert(discussions)
+      .values(discussion)
+      .onConflictDoUpdate({
+        target: discussions.slug,
+        set: {
+          ...discussion,
+          updatedAt: new Date(),
+        },
+      });
   }
+  console.log(`Seeded ${discussionData.length} discussions`);
 }
 
 main()
-  .then(async () => {
-    await prisma.$disconnect();
+  .then(() => {
+    console.log("Seeding completed.");
+    process.exit(0);
   })
-  .catch(async (e) => {
-    console.error(e);
-    await prisma.$disconnect();
+  .catch((error) => {
+    console.error("Seeding failed:", error);
     process.exit(1);
   });
